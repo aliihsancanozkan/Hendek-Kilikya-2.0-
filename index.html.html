@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hendek | Kilikya</title>
+    <style>
+        body { margin: 0; background: #1a1a1a; font-family: 'Georgia', serif; color: white; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        #game-container { position: relative; width: 900px; height: 650px; border: 5px solid #5d4037; background: #c2b280; overflow: hidden; }
+        canvas { display: block; background: #c2b280; }
+        .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.92); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; z-index: 100; }
+        .overlay h1 { font-size: 40px; margin-bottom: 10px; }
+        .overlay h2 { font-size: 28px; margin-bottom: 15px; }
+        .overlay p { font-size: 16px; margin: 8px auto; max-width: 620px; line-height: 1.5; }
+        .overlay small { color: #f1c40f; margin-top: 20px; font-size: 14px; }
+        #victory-screen, #defeat-screen { z-index: 160; }
+        #victory-screen h1 { color: #2ecc71; }
+        #defeat-screen h1 { color: #e74c3c; }
+        .mode-btns { display: flex; gap: 24px; margin-top: 28px; }
+        .mode-btn { padding: 18px 38px; font-size: 18px; background: #8b4513; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 10px; transition: 0.2s; }
+        .mode-btn:hover { background: #a0522d; transform: scale(1.05); }
+        .restart-btn { padding: 12px 25px; background: #8b4513; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 8px; margin-top: 20px; font-size: 16px; }
+        .restart-btn:hover { background: #a0522d; }
+        button { padding: 10px 20px; background: #8b4513; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 8px; transition: 0.2s; }
+        button:hover { background: #a0522d; }
+        #letter-popup { position: absolute; top: 15%; left: 50%; transform: translateX(-50%); background: #f4e4bc; color: #2c1e1a; padding: 20px; border: 5px solid #8b4513; display: none; z-index: 200; width: 380px; text-align: center; box-shadow: 0 0 30px black; border-radius: 15px; }
+        #popup-warning { color: #c0392b; font-weight: bold; margin: 8px 0; font-size: 15px; background: #ffeaa7; padding: 4px; border-radius: 8px; display: inline-block; }
+        #popup-timer { font-size: 18px; font-weight: bold; margin: 10px 0 5px 0; background: #2c1e1a; color: #f4e4bc; display: inline-block; padding: 5px 15px; border-radius: 20px; }
+        .button-group { margin-top: 15px; display: flex; gap: 15px; justify-content: center; }
+        #news-flash { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: #f1c40f; padding: 6px 16px; border-radius: 30px; font-weight: bold; z-index: 150; font-size: 16px; white-space: nowrap; pointer-events: none; animation: fadeOut 5s forwards; border: 1px solid #f1c40f; }
+        @keyframes fadeOut { 0%{opacity:1} 70%{opacity:1} 100%{opacity:0;visibility:hidden} }
+        #custom-ui { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 10px; font-size: 14px; font-weight: bold; z-index: 60; backdrop-filter: blur(4px); border: 1px solid #8b4513; display: none; }
+        .tut-controls { background: rgba(255,255,255,0.08); border-radius: 10px; padding: 12px 20px; margin: 8px auto; max-width: 600px; }
+        .tut-controls p { margin: 5px 0; font-size: 15px; }
+        hr.tut-sep { border: none; border-top: 1px solid rgba(255,255,255,0.2); margin: 12px 0; width: 100%; }
+        /* Mobil ölçekleme */
+        #game-container { transform-origin: top left; }
+        /* Mobil 2P devre dışı */
+        .mode-btn-disabled { background: #444 !important; color: #777 !important; cursor: not-allowed !important; transform: none !important; }
+        #mobile-two-msg { display:none; color:#e74c3c; font-size:13px; margin-top:10px; max-width:300px; }
+        /* Joystick */
+        #joystick-zone { position:absolute; bottom:20px; left:20px; width:150px; height:150px; pointer-events:all; touch-action:none; }
+        #joystick-base { position:absolute; inset:0; border-radius:50%; background:rgba(255,255,255,0.12); border:3px solid rgba(255,255,255,0.3); }
+        #joystick-handle { position:absolute; width:60px; height:60px; border-radius:50%; background:rgba(255,255,255,0.5); border:2px solid rgba(255,255,255,0.8); top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none; transition: transform 0.05s; }
+        /* Kaz butonu */
+        #dig-btn { position:absolute; bottom:30px; right:30px; width:95px; height:95px; border-radius:50%; background:rgba(139,69,19,0.85); border:4px solid rgba(241,196,15,0.9); display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:all; touch-action:none; user-select:none; -webkit-user-select:none; }
+        #dig-btn span { pointer-events:none; }
+        /* Mobil başla butonu (tutorial ekranlarında) */
+        .mobile-start-btn { display:none; margin-top:16px; padding:14px 32px; font-size:17px; background:#27ae60; color:white; border:none; border-radius:10px; font-weight:bold; }
+        #mobile-controls { display:none; position:absolute; inset:0; z-index:55; pointer-events:none; }
+    </style>
+</head>
+<body>
+<div id="game-container">
+
+    <!-- 1. INTRO -->
+    <div id="intro-screen" class="overlay" style="z-index:170;">
+        <h1>🏛️ HENDEK | KİLİKYA</h1>
+        <button id="startBtn" style="margin-top:24px; padding:14px 32px; font-size:17px;">Oyunu Başlat</button>
+    </div>
+
+    <!-- 2. STORY -->
+    <div id="story-screen" class="overlay" style="display:none; z-index:165;">
+        <h2>📜 HİKAYE</h2>
+        <p>🗓️ <strong>M.Ö. 75, Kilikya kıyıları.</strong></p>
+        <p>Akdeniz'i yıllardır korkuyla yönetmeye çalışan Romalılar, karşılarında çok güçlü bir düşman buldular: korsan lideri <strong>Zenicetes</strong>. Bu acımasız adam, sarp Kilikya dağlarına kurulmuş kalesinden tüm Doğu Akdeniz ticaretini kontrol altında tutuyordu.</p>
+        <p>Roma Senatosu sonunda harekete geçti. Ordu, kalenin eteklerine dayandı — ama Zenicetes'i kılıç zoruyla almak çok pahalıya patlar. Bir plan gerekli.</p>
+        <p>Sen, ordunun baş mühendisisin. Görevin: kalenin etrafına <strong>8 hendek</strong> kazarak Zenicetes'in tüm kaçış yollarını kesmek. Onu mahsur bırak, yenilgiyi kabul etmeye zorla.</p>
+        <p style="color:#f1c40f;">Tarih senin ellerinde. Başarısız olursan Zenicetes özgür kalır.</p>
+        <button id="storyNextBtn" style="margin-top:20px; padding:12px 28px; font-size:16px;">Devam Et →</button>
+    </div>
+
+    <!-- 3. MOD SEÇİMİ -->
+    <div id="mode-screen" class="overlay" style="display:none; z-index:160;">
+        <h2>🎮 Oyun Modu</h2>
+        <p style="color:#aaa;">Nasıl oynamak istersiniz?</p>
+        <div class="mode-btns">
+            <button class="mode-btn" id="singleBtn">👤 Tek Kişilik</button>
+            <button class="mode-btn" id="twoBtn">👥 2 Kişilik</button>
+        </div>
+        <p id="mobile-two-msg">⚠️ 2 kişilik oyun modu mobil cihazlarda desteklenmemektedir.</p>
+    </div>
+
+    <!-- 4a. OYNANMA REHBERİ — TEK KİŞİLİK -->
+    <div id="tutorial-single" class="overlay" style="display:none; z-index:155;">
+        <h2>📋 OYNANMA REHBERİ</h2>
+        <div class="tut-controls" id="tut-pc-controls">
+            <p>🕹️ <strong>Hareket:</strong> WASD veya Yön Tuşları</p>
+            <p>⛏️ <strong>Hendek kaz:</strong> Boşluk (hendeğe yakınken)</p>
+        </div>
+        <div class="tut-controls" id="tut-mobile-controls" style="display:none;">
+            <p>🕹️ <strong>Hareket:</strong> Sol alttaki joystick</p>
+            <p>⛏️ <strong>Hendek kaz:</strong> Sağ alttaki ⛏️ butonu (hendeğe yakınken)</p>
+        </div>
+        <div class="tut-controls">
+            <p>🚢 <strong>Liman:</strong> Her 40 saniyede bir gemi gelir. Gazeteciyi takip edip erzak al.</p>
+            <p>⚔️ <strong>Düşman işçileri:</strong> Hendekleri doldurmaya çalışırlar — üzerlerine giderek engelle.</p>
+            <p>⚠️ <strong>Zenicetes</strong> kazılmamış bir hendeğe temas ederse kaçabilir!</p>
+        </div>
+        <p>🏆 <strong>Kazan:</strong> 8 hendeği tamamla. &nbsp; 💀 <strong>Kaybet:</strong> Zenicetes kaçarsa.</p>
+        <small id="tut-single-small">⚡ Boşluk tuşuna basarak başla...</small>
+        <button class="mobile-start-btn" id="tut-single-start-btn">▶ Başla</button>
+    </div>
+
+    <!-- 4b. OYNANMA REHBERİ — 2 KİŞİLİK -->
+    <div id="tutorial-two" class="overlay" style="display:none; z-index:155;">
+        <h2>📋 OYNANMA REHBERİ — 2 KİŞİLİK</h2>
+        <div class="tut-controls">
+            <p>👤 <strong>Mühendis (1. Oyuncu)</strong></p>
+            <p>🕹️ Hareket: <strong>WASD</strong> &nbsp;|&nbsp; ⛏️ Hendek kaz: <strong>Boşluk</strong></p>
+        </div>
+        <hr class="tut-sep">
+        <div class="tut-controls">
+            <p>👤 <strong>Zenicetes (2. Oyuncu)</strong></p>
+            <p>Oyun başında hendeklerin üzerinde <strong>1-8</strong> rakamları görünür.</p>
+            <p>Bir rakama basınca o hendeğe 📍 işaret konur.</p>
+            <p>⬅️ Sol Ok: işareti saat tersi yönde kaydır &nbsp;|&nbsp; ➡️ Sağ Ok: saat yönünde</p>
+            <p>↩️ <strong>Enter:</strong> Zenicetes oraya yürür.</p>
+            <p>Kazılmamış bir hendeğe ulaşırsan <strong>Zenicetes kazanır!</strong></p>
+        </div>
+        <small>⚡ Boşluk tuşuna basarak başla...</small>
+    </div>
+
+    <!-- KAZANMA -->
+    <div id="victory-screen" class="overlay" style="display:none; z-index:180;">
+        <h1 id="victory-title">🏆 KAZANDIN! 🏆</h1>
+        <p id="victory-text">Zenicetes ve ordusunu kalesine kıstırdın, artık kaçacak yerleri yok!</p>
+        <button class="restart-btn" id="victoryRestartBtn">Yeniden Oyna</button>
+    </div>
+
+    <!-- KAYBETME -->
+    <div id="defeat-screen" class="overlay" style="display:none; z-index:180;">
+        <h1 id="defeat-title">💀 KAYBETTİN! 💀</h1>
+        <p id="defeat-text">Zenicetes kaçıp kurtuldu!</p>
+        <button class="restart-btn" id="defeatRestartBtn">Yeniden Oyna</button>
+    </div>
+
+    <!-- POPUP -->
+    <div id="letter-popup">
+        <h3 id="popup-title">📜 Gemi Limanda!</h3>
+        <div id="popup-warning" style="display:none;">⚠️ Hızlı karar ver, gemi kalkıyor! ⚠️</div>
+        <p id="popup-text">Takviye malzemeleri geldi, gelmek ister misin?</p>
+        <div id="popup-timer">Kalan süre: 30s</div>
+        <div class="button-group">
+            <button id="btn-yes">EVET</button>
+            <button id="btn-no">ŞİMDİ DEĞİL</button>
+        </div>
+    </div>
+
+    <!-- MOBİL KONTROLLER -->
+    <div id="mobile-controls">
+        <div id="joystick-zone">
+            <div id="joystick-base">
+                <div id="joystick-handle"></div>
+            </div>
+        </div>
+        <div id="dig-btn">
+            <span style="font-size:24px;">⛏️</span>
+            <span style="font-size:13px; font-weight:bold; color:white; margin-top:2px;">KAZ</span>
+        </div>
+    </div>
+
+    <div id="custom-ui">📦 Erzak: <span id="mats">40</span></div>
+    <canvas id="gameCanvas" width="900" height="650"></canvas>
+</div>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+// ── GLOBAL STATE ──────────────────────────────────────────────
+let state = "INTRO";
+let gameMode = "single"; // "single" | "two"
+let gameActive = false;
+let loopStarted = false;
+
+let materials = 40;
+let shipCountdown = 40;
+let shipStayTimer = 30;
+let shipVisitCount = 0;
+let isShipReady = false;
+let isShipMissionActive = false;
+let enemySpawnTimer = 0;
+let spaceBlockTimer = 0;
+let firstShipNoSelected = false;
+let liarHit = false;
+let doubleDig = false;
+let mainInterval = null;
+
+let keys = {};
+
+// ── MOBİL ALGILAMA & JOYSTICK ─────────────────────────────────
+const isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+
+let joystick = { active: false, touchId: null, dx: 0, dy: 0, startClientX: 0, startClientY: 0 };
+let gameScale = 1;
+
+function scaleGame() {
+    const cont = document.getElementById('game-container');
+    const scaleX = window.innerWidth  / 910;
+    const scaleY = window.innerHeight / 660;
+    gameScale = Math.min(scaleX, scaleY, 1);
+    const sw = 910 * gameScale, sh = 660 * gameScale;
+    cont.style.transform       = `scale(${gameScale})`;
+    cont.style.transformOrigin = 'top left';
+    cont.style.marginLeft      = `${(window.innerWidth  - sw) / 2}px`;
+    cont.style.marginTop       = `${(window.innerHeight - sh) / 2}px`;
+    document.body.style.display = 'block';
+}
+
+if (isMobile) {
+    scaleGame();
+    window.addEventListener('resize', scaleGame);
+
+    // 2P butonunu grile
+    const twoBtn = document.getElementById('twoBtn');
+    twoBtn.classList.add('mode-btn-disabled');
+
+    // Tutorial: PC kısmını gizle, mobil kısmını göster
+    document.getElementById('tut-pc-controls').style.display    = 'none';
+    document.getElementById('tut-mobile-controls').style.display = 'block';
+    document.getElementById('tut-single-small').style.display    = 'none';
+    document.getElementById('tut-single-start-btn').style.display = 'block';
+
+    // Joystick dokunma olayları — floating joystick (touch başlangıç noktası merkez)
+    const joystickZone   = document.getElementById('joystick-zone');
+    const joystickHandle = document.getElementById('joystick-handle');
+
+    const JOY_MAX_R = 55; // client px cinsinden max yarıçap
+
+    joystickZone.addEventListener('touchstart', e => {
+        e.preventDefault();
+        if (joystick.active) return;
+        const t = e.changedTouches[0];
+        joystick.active = true;
+        joystick.touchId = t.identifier;
+        joystick.startClientX = t.clientX;
+        joystick.startClientY = t.clientY;
+        joystick.dx = 0; joystick.dy = 0;
+        joystickHandle.style.transform = 'translate(-50%, -50%)';
+    }, { passive: false });
+
+    joystickZone.addEventListener('touchmove', e => {
+        e.preventDefault();
+        for (const t of e.changedTouches) {
+            if (t.identifier !== joystick.touchId) continue;
+            let rawDx = t.clientX - joystick.startClientX;
+            let rawDy = t.clientY - joystick.startClientY;
+            const dist = Math.hypot(rawDx, rawDy);
+            if (dist > JOY_MAX_R) { rawDx = rawDx/dist*JOY_MAX_R; rawDy = rawDy/dist*JOY_MAX_R; }
+            joystick.dx = rawDx / JOY_MAX_R;
+            joystick.dy = rawDy / JOY_MAX_R;
+            // Handle görseli: client px → container içi px (scale'e böl)
+            const vDx = rawDx / gameScale;
+            const vDy = rawDy / gameScale;
+            joystickHandle.style.transform = `translate(calc(-50% + ${vDx}px), calc(-50% + ${vDy}px))`;
+        }
+    }, { passive: false });
+
+    joystickZone.addEventListener('touchend', e => {
+        e.preventDefault();
+        for (const t of e.changedTouches) {
+            if (t.identifier === joystick.touchId) {
+                joystick.active = false; joystick.dx = 0; joystick.dy = 0;
+                joystickHandle.style.transform = 'translate(-50%, -50%)';
+            }
+        }
+    }, { passive: false });
+
+    joystickZone.addEventListener('touchcancel', e => {
+        joystick.active = false; joystick.dx = 0; joystick.dy = 0;
+        joystickHandle.style.transform = 'translate(-50%, -50%)';
+    }, { passive: false });
+
+    // Kaz butonu
+    const digBtn = document.getElementById('dig-btn');
+    digBtn.addEventListener('touchstart', e => {
+        e.preventDefault();
+        keys["Space"] = true;
+    }, { passive: false });
+    digBtn.addEventListener('touchend', e => {
+        e.preventDefault();
+    }, { passive: false });
+}
+
+// ── ENTITIES ──────────────────────────────────────────────────
+let player = { x: 450, y: 550, speed: 4.5 };
+
+let zenicetes = {
+    x: 450, y: 300, speed: 0.17,
+    targetPos: null, currentTargetEdge: null, lastTouchedEdge: null,
+    speechTimer: 0, speechText: "Ahhh, tamam ya tamam kaçmıyorum!"
+};
+
+// 2P Zenicetes kontrol durumu
+let zen2 = {
+    markerIdx: 0,       // 0-7 arası, zenEdgeOrder ile gerçek hendek indeksine çevrilir
+    showNumbers: true,
+    walking: false,
+    walkFrames: 0,      // yürümeye başladıktan kaç frame geçti (ışınlanma için)
+    speed: 0.20,
+    targetMidX: 0,
+    targetMidY: 0
+};
+
+// Sayı → hendek eşlemesi: 1 numara sağ üst (edge 7), saat yönünde ilerler
+// markerIdx: 0→edge7(1), 1→edge0(2), 2→edge1(3), ..., 7→edge6(8)
+const zenEdgeOrder = [6, 7, 0, 1, 2, 3, 4, 5];
+
+let captain = { active: false, x: 50, y: 310, rewardGiven: false, nearbyTriggered: false };
+
+let messenger = {
+    x: 50, y: 325, active: false, reachedPlayer: false, goingBack: false,
+    speechTimer: 0, speechText: "", waitingDecision: false, confirmed: false,
+    hasExclamation: false, targetStandX: 0, urgentWarningShown: false,
+    noAnswerYet: false, inShipMission: false,
+    shipMissionX: 0, shipMissionY: 0, shipMissionTargetX: 0, shipMissionTargetY: 0,
+    shipMissionWalk: false, shipMissionSpeech: "", shipMissionTimer: 0,
+    normalEntry: true, entryType: "normal"
+};
+
+let bridge  = { x: 0,  y: 270, w: 150, h: 100 };
+let timerBox= { x: 15, y: 285, w: 100, h: 70  };
+
+let confusedWorker = {
+    x: -50, y: -50, active: false, state: "COMING", timer: 0,
+    text: "Nereyi kazalım patron, anlamadık.",
+    targetX: 0, targetY: 0, startCorner: { x: 0, y: 0 }
+};
+
+let ourWorkers  = [];
+let enemyLegions= [];
+
+const center = { x: 450, y: 300 };
+const radius  = 180;
+let edges = [];
+function buildEdges() {
+    edges = [];
+    for (let i = 0; i < 8; i++) {
+        let a1 = (i * 45) * Math.PI / 180;
+        let a2 = ((i + 1) * 45) * Math.PI / 180;
+        edges.push({
+            id: i,
+            x1: center.x + Math.cos(a1) * radius,
+            y1: center.y + Math.sin(a1) * radius,
+            x2: center.x + Math.cos(a2) * radius,
+            y2: center.y + Math.sin(a2) * radius,
+            isDug: false, isDigging: false
+        });
+    }
+}
+buildEdges();
+
+// ── YARDIMCI FONKSİYONLAR ─────────────────────────────────────
+function distToSegment(p, v, w) {
+    let l2 = Math.pow(v.x - w.x, 2) + Math.pow(v.y - w.y, 2);
+    if (l2 === 0) return Math.hypot(p.x - v.x, p.y - v.y);
+    let t = Math.max(0, Math.min(1, ((p.x-v.x)*(w.x-v.x)+(p.y-v.y)*(w.y-v.y)) / l2));
+    return Math.hypot(p.x - (v.x + t*(w.x-v.x)), p.y - (v.y + t*(w.y-v.y)));
+}
+
+function drawSpeechBubble(x, y, text) {
+    const maxWidth = 200, lineHeight = 20;
+    ctx.font = "bold 14px Arial"; ctx.textAlign = "center";
+    let words = text.split(' '), lines = [], cur = '';
+    for (let w of words) {
+        let test = cur + (cur ? ' ' : '') + w;
+        if (ctx.measureText(test).width > maxWidth && cur) { lines.push(cur); cur = w; }
+        else cur = test;
+    }
+    lines.push(cur);
+    let bw = maxWidth + 20, bh = lineHeight * lines.length + 20;
+    let bx = Math.min(Math.max(x, bw/2), 900 - bw/2);
+    let by = Math.max(y - bh - 15, 10);
+    ctx.fillStyle = "white";
+    ctx.beginPath(); ctx.roundRect(bx - bw/2, by, bw, bh, 8); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x, by+bh); ctx.lineTo(x-8, by+bh-10); ctx.lineTo(x+8, by+bh-10); ctx.fill();
+    ctx.fillStyle = "black";
+    lines.forEach((l, i) => ctx.fillText(l, bx, by + 20 + i * lineHeight));
+    ctx.textAlign = "left";
+}
+
+function showFlash(text) {
+    let old = document.getElementById("news-flash");
+    if (old) old.remove();
+    let fl = document.createElement("div");
+    fl.id = "news-flash"; fl.innerText = text;
+    document.getElementById("game-container").appendChild(fl);
+    setTimeout(() => { if (fl.parentNode) fl.remove(); }, 5000);
+}
+
+function showVictory() {
+    gameActive = false;
+    if (gameMode === "two") {
+        document.getElementById("victory-title").innerText = "🏆 MÜHENDİS KAZANDI! 🏆";
+        document.getElementById("victory-text").innerText = "Zenicetes ve ordusu kaleye hapsedildi!";
+    } else {
+        document.getElementById("victory-title").innerText = "🏆 KAZANDIN! 🏆";
+        document.getElementById("victory-text").innerText = "Zenicetes ve ordusunu kalesine kıstırdın, artık kaçacak yerleri yok!";
+    }
+    document.getElementById("victory-screen").style.display = "flex";
+}
+
+function showDefeat() {
+    gameActive = false;
+    if (gameMode === "two") {
+        document.getElementById("defeat-title").innerText = "👑 ZENİCETES KAZANDI!";
+        document.getElementById("defeat-text").innerText = "Zenicetes mahsur kalmadan kaçmayı başardı!";
+    } else {
+        document.getElementById("defeat-title").innerText = "💀 KAYBETTİN! 💀";
+        document.getElementById("defeat-text").innerText = "Zenicetes kaçıp kurtuldu!";
+    }
+    document.getElementById("defeat-screen").style.display = "flex";
+}
+
+// ── OYUN SIFIRLAMA ─────────────────────────────────────────────
+function resetGameState() {
+    materials = 40; shipCountdown = 40; shipStayTimer = 30;
+    shipVisitCount = 0; isShipReady = false; isShipMissionActive = false;
+    enemySpawnTimer = 0; spaceBlockTimer = 30;
+    firstShipNoSelected = false; liarHit = false; doubleDig = false;
+
+    player.x = 450; player.y = 550;
+
+    zenicetes.x = 450; zenicetes.y = 300; zenicetes.speed = 0.17;
+    zenicetes.targetPos = null; zenicetes.currentTargetEdge = null;
+    zenicetes.lastTouchedEdge = null; zenicetes.speechTimer = 0;
+
+    zen2.markerIdx = 0; zen2.showNumbers = true;
+    zen2.walking = false; zen2.walkFrames = 0; zen2.speed = 0.20; zen2.targetMidX = 0; zen2.targetMidY = 0;
+
+    captain.active = false; captain.rewardGiven = false; captain.nearbyTriggered = false;
+    messenger.active = false; messenger.reachedPlayer = false; messenger.goingBack = false;
+    messenger.waitingDecision = false; messenger.confirmed = false;
+    messenger.hasExclamation = false; messenger.urgentWarningShown = false;
+    messenger.noAnswerYet = false; messenger.inShipMission = false;
+    messenger.normalEntry = true; messenger.entryType = "normal";
+
+    confusedWorker.active = false;
+    ourWorkers = []; enemyLegions = [];
+    buildEdges();
+    keys = {};
+    document.getElementById("mats").innerText = materials;
+}
+
+function goToModeSelect() {
+    gameActive = false;
+    if (mainInterval) { clearInterval(mainInterval); mainInterval = null; }
+    document.getElementById("victory-screen").style.display = "none";
+    document.getElementById("defeat-screen").style.display = "none";
+    document.getElementById("custom-ui").style.display = "none";
+    document.getElementById("letter-popup").style.display = "none";
+    if (isMobile) document.getElementById('mobile-controls').style.display = 'none';
+    ctx.clearRect(0, 0, 900, 650);
+    document.getElementById("mode-screen").style.display = "flex";
+}
+
+// ── OYUN BAŞLATMA ─────────────────────────────────────────────
+function startGame(mode) {
+    gameMode = mode;
+    resetGameState();
+    state = "MAIN";
+    gameActive = true;
+    document.getElementById("custom-ui").style.display = "block";
+    if (isMobile) document.getElementById('mobile-controls').style.display = 'block';
+    if (mainInterval) clearInterval(mainInterval);
+    mainInterval = setInterval(gameTimerTick, 1000);
+    if (!loopStarted) { loopStarted = true; requestAnimationFrame(gameLoop); }
+}
+
+function gameTimerTick() {
+    if (!gameActive) return;
+    if (state === "MAIN") {
+        if (!isShipReady && !isShipMissionActive && !messenger.active) {
+            if (shipCountdown > 0) shipCountdown--;
+        }
+        if ((isShipReady || messenger.active) && !isShipMissionActive) {
+            if (shipStayTimer > 0) shipStayTimer--;
+        }
+        if (shipStayTimer <= 0 && isShipReady) {
+            isShipReady = false; shipCountdown = 40; shipStayTimer = 30;
+            if (messenger.confirmed && !liarHit) { liarHit = true; }
+            messenger.confirmed = false;
+        }
+    }
+    if (state === "MAIN" && messenger.active && messenger.waitingDecision && !messenger.goingBack) {
+        let td = document.getElementById("popup-timer");
+        let wd = document.getElementById("popup-warning");
+        if (td) td.innerText = `Kalan süre: ${Math.max(0, shipStayTimer)}s`;
+        if (shipStayTimer <= 5 && !messenger.urgentWarningShown) {
+            messenger.urgentWarningShown = true;
+            if (wd) wd.style.display = "block";
+        } else if (shipStayTimer > 5 && wd) wd.style.display = "none";
+        if (shipStayTimer <= 0 && messenger.waitingDecision) {
+            document.getElementById("letter-popup").style.display = "none";
+            messenger.waitingDecision = false;
+            messenger.speechText = "Hadi hızlı olmalıyız!";
+            messenger.speechTimer = 90;
+            setTimeout(() => { messenger.goingBack = true; messenger.confirmed = true; }, 1000);
+        }
+    }
+    if (state === "MAIN" && gameActive) {
+        let dugCount = edges.filter(e => e.isDug).length;
+        // Düşman spawn
+        if (dugCount >= 6) {
+            enemySpawnTimer++;
+            if (enemySpawnTimer >= 7) { enemySpawnTimer = 0; spawnEnemyLegion(6); spawnEnemyLegion(6); spawnEnemyLegion(6); }
+        } else if (dugCount >= 4) {
+            enemySpawnTimer++;
+            if (enemySpawnTimer >= 10) { enemySpawnTimer = 0; spawnEnemyLegion(7); spawnEnemyLegion(7); }
+        } else { enemySpawnTimer = 0; }
+
+        if (messenger.active && !messenger.goingBack && !messenger.waitingDecision && shipStayTimer <= 5) {
+            messenger.goingBack = true; messenger.confirmed = false;
+            document.getElementById("letter-popup").style.display = "none";
+        }
+        if (dugCount === 8 && gameActive) showVictory();
+    }
+}
+
+// ── DÜŞMAN SPAWN ───────────────────────────────────────────────
+function spawnEnemyLegion(fillTime) {
+    if (fillTime === undefined) fillTime = 15;
+    let target = edges.find(e => e.isDug && !enemyLegions.some(l => l.target === e));
+    if (!target) return;
+    let legion = { target, soldiers: [], timer: 0, fillTime };
+    for (let i = 0; i < 6; i++)
+        legion.soldiers.push({ x: center.x + (Math.random()*20-10), y: center.y + (Math.random()*20-10) });
+    enemyLegions.push(legion);
+}
+
+// ── GEMİ / POPUP ──────────────────────────────────────────────
+function acceptShip(choice) {
+    document.getElementById("letter-popup").style.display = "none";
+    messenger.waitingDecision = false;
+    if (shipVisitCount === 0 && !choice && !firstShipNoSelected) {
+        firstShipNoSelected = true;
+        messenger.speechText = "Sen bilirsin ama yine de gelmeni öneririm, bu kazımın ilk erzak gemisi. Kararını değiştirirsen gemi kalkana kadar gelebilirsin.";
+        messenger.speechTimer = 240; messenger.noAnswerYet = true;
+        messenger.confirmed = false; messenger.entryType = "no";
+        setTimeout(() => { if (!messenger.waitingDecision) messenger.goingBack = true; }, 3000);
+        return;
+    }
+    if (choice) {
+        messenger.speechText = "Beni takip et!";
+        messenger.speechTimer = 90; messenger.confirmed = true;
+        messenger.goingBack = true; messenger.entryType = "normal";
+    } else {
+        messenger.speechText = "Yine de sen bilirsin, gemi kalkana kadar yine de gelebilirsin.";
+        messenger.speechTimer = 120; messenger.noAnswerYet = true;
+        messenger.confirmed = false; messenger.entryType = "no";
+        setTimeout(() => { if (!messenger.waitingDecision) messenger.goingBack = true; }, 2000);
+    }
+}
+
+// ── ANA OYUN DÖNGÜSÜ ──────────────────────────────────────────
+function gameLoop() {
+    ctx.clearRect(0, 0, 900, 650);
+    if      (state === "MAIN"        && gameActive) drawMain();
+    else if (state === "SHIP_SCREEN" && gameActive) drawShipMission();
+    requestAnimationFrame(gameLoop);
+}
+
+// ── ANA OYUN ÇİZİMİ ──────────────────────────────────────────
+function drawMain() {
+    const dialogueActive   = (messenger.active && messenger.waitingDecision && !messenger.goingBack);
+    const everythingFrozen = isShipMissionActive;
+    if (spaceBlockTimer > 0) spaceBlockTimer--;
+
+    // Köprü
+    ctx.fillStyle = "#8b4513"; ctx.fillRect(bridge.x, bridge.y, bridge.w, bridge.h);
+    ctx.fillStyle = "#5d4037";
+    ctx.fillRect(bridge.x, bridge.y, bridge.w, 12);
+    ctx.fillRect(bridge.x, bridge.y + bridge.h - 12, bridge.w, 12);
+
+    // Timer kutusu
+    let boxColor, dispText, dispVal;
+    if (isShipMissionActive)               { boxColor="#2980b9"; dispText="Gemiye:";  dispVal=shipCountdown+"s"; }
+    else if ((isShipReady||messenger.active) && shipStayTimer>0) {
+        boxColor=(shipStayTimer<=5)?"#c0392b":"#27ae60"; dispText="Kalkışa:"; dispVal=shipStayTimer+"s";
+    } else                                 { boxColor="#2980b9"; dispText="Gemiye:";  dispVal=shipCountdown+"s"; }
+    ctx.fillStyle=boxColor;
+    ctx.beginPath(); ctx.roundRect(timerBox.x,timerBox.y,timerBox.w,timerBox.h,10); ctx.fill();
+    ctx.fillStyle="white"; ctx.font="bold 16px Arial"; ctx.textAlign="center";
+    ctx.fillText(dispText, timerBox.x+timerBox.w/2, timerBox.y+28);
+    ctx.font="bold 22px Arial";
+    ctx.fillText(dispVal,  timerBox.x+timerBox.w/2, timerBox.y+58);
+
+    // Hendekler
+    edges.forEach(e => {
+        ctx.strokeStyle = e.isDug ? "#4e342e" : (e.isDigging ? "rgba(241,196,15,0.4)" : "rgba(0,0,0,0.05)");
+        ctx.lineWidth = 22;
+        ctx.beginPath(); ctx.moveTo(e.x1,e.y1); ctx.lineTo(e.x2,e.y2); ctx.stroke();
+    });
+
+    // İşçiler
+    ourWorkers.forEach((w, i) => {
+        if (!everythingFrozen && !dialogueActive) { w.x += (w.tx-w.x)*0.1; w.y += (w.ty-w.y)*0.1; }
+        ctx.fillStyle="#3498db"; ctx.beginPath(); ctx.arc(w.x,w.y,5,0,Math.PI*2); ctx.fill();
+        if (i === 0 && !everythingFrozen && !dialogueActive) {
+            w.prog += 0.05;
+            if (w.prog >= 30) {
+                let targets = [...new Set(ourWorkers.map(wr=>wr.target))];
+                targets.forEach(t => { t.isDug = true; t.isDigging = false; });
+                targets.forEach(t => {
+                    if (distToSegment(player,{x:t.x1,y:t.y1},{x:t.x2,y:t.y2}) < 25) {
+                        let ang = Math.atan2(player.y-center.y, player.x-center.x);
+                        player.x += Math.cos(ang)*55; player.y += Math.sin(ang)*55;
+                    }
+                });
+                ourWorkers = [];
+            }
+        }
+    });
+
+    // Düşman askerler (tersten döngü)
+    for (let idx = enemyLegions.length-1; idx >= 0; idx--) {
+        let legion = enemyLegions[idx];
+        let midX=(legion.target.x1+legion.target.x2)/2, midY=(legion.target.y1+legion.target.y2)/2;
+        if (!everythingFrozen && !dialogueActive) {
+            let allReached = true;
+            legion.soldiers.forEach((s,si) => {
+                let tx=midX+(si*12-30), ty=midY+(si*2-5), d=Math.hypot(tx-s.x,ty-s.y);
+                if(d>5){s.x+=(tx-s.x)/d*1.3; s.y+=(ty-s.y)/d*1.3; allReached=false;}
+                ctx.fillText("⚔️",s.x-8,s.y+5);
+            });
+            if (allReached) {
+                legion.timer += 1/60;
+                ctx.fillStyle="red"; ctx.fillRect(midX-20,midY-35,(legion.timer/legion.fillTime)*40,6);
+                if (legion.timer >= legion.fillTime) { legion.target.isDug=false; enemyLegions.splice(idx,1); continue; }
+            }
+            if (Math.hypot(player.x-midX,player.y-midY) < 45) { enemyLegions.splice(idx,1); continue; }
+        } else {
+            legion.soldiers.forEach(s=>ctx.fillText("⚔️",s.x-8,s.y+5));
+            ctx.fillStyle="red"; ctx.fillRect(midX-20,midY-35,(legion.timer/legion.fillTime)*40,6);
+        }
+    }
+
+    // ── ZENİCETES ─────────────────────────────────────────────
+    if (gameMode === "single") {
+        // AI modu
+        if (!everythingFrozen && !dialogueActive) {
+            if (!zenicetes.targetPos) {
+                let open = edges.filter(e=>!e.isDug);
+                if (open.length > 0) {
+                    let chosen;
+                    if (open.length <= 2 && zenicetes.lastTouchedEdge) {
+                        let lmx=(zenicetes.lastTouchedEdge.x1+zenicetes.lastTouchedEdge.x2)/2;
+                        let lmy=(zenicetes.lastTouchedEdge.y1+zenicetes.lastTouchedEdge.y2)/2;
+                        chosen = open.reduce((best,e)=>{
+                            let mx=(e.x1+e.x2)/2,my=(e.y1+e.y2)/2,d=Math.hypot(mx-lmx,my-lmy);
+                            return d>best.dist?{edge:e,dist:d,x:mx,y:my}:best;
+                        },{edge:open[0],dist:-1,x:(open[0].x1+open[0].x2)/2,y:(open[0].y1+open[0].y2)/2});
+                    } else {
+                        let cands=open.map(e=>({edge:e,x:(e.x1+e.x2)/2,y:(e.y1+e.y2)/2,dist:Math.hypot(zenicetes.x-(e.x1+e.x2)/2,zenicetes.y-(e.y1+e.y2)/2)}));
+                        cands.sort((a,b)=>b.dist-a.dist);
+                        let top=cands.slice(0,3);
+                        chosen=top[Math.floor(Math.random()*top.length)];
+                    }
+                    if (chosen) { zenicetes.targetPos={x:chosen.x,y:chosen.y}; zenicetes.currentTargetEdge=chosen.edge; }
+                }
+            } else {
+                let dt=Math.hypot(zenicetes.x-zenicetes.targetPos.x,zenicetes.y-zenicetes.targetPos.y);
+                if (dt < 8) {
+                    // Hedefe ulaştı — sadece burada kaçış kontrolü yap
+                    let arrivedEdge = zenicetes.currentTargetEdge;
+                    if (arrivedEdge && !arrivedEdge.isDug && !arrivedEdge.isDigging && gameActive) {
+                        showDefeat(); return;
+                    }
+                    zenicetes.lastTouchedEdge=zenicetes.currentTargetEdge; zenicetes.targetPos=null;
+                } else {
+                    let ang=Math.atan2(zenicetes.targetPos.y-zenicetes.y,zenicetes.targetPos.x-zenicetes.x);
+                    let nX=zenicetes.x+Math.cos(ang)*zenicetes.speed;
+                    let nY=zenicetes.y+Math.sin(ang)*zenicetes.speed;
+                    let hitWorker =ourWorkers.find(w=>Math.hypot(nX-w.x,nY-w.y)<18);
+                    let hitDigging=edges.find(e=>e.isDigging&&distToSegment({x:nX,y:nY},{x:e.x1,y:e.y1},{x:e.x2,y:e.y2})<25);
+                    let hitFinished=edges.find(e=>e.isDug&&distToSegment({x:nX,y:nY},{x:e.x1,y:e.y1},{x:e.x2,y:e.y2})<20);
+                    if (hitWorker&&hitDigging) {
+                        let pa=Math.atan2(center.y-zenicetes.y,center.x-zenicetes.x);
+                        zenicetes.x+=Math.cos(pa)*60; zenicetes.y+=Math.sin(pa)*60;
+                        zenicetes.targetPos=null; zenicetes.speechTimer=120;
+                    } else if (hitWorker||hitDigging||hitFinished) {
+                        zenicetes.targetPos=null; zenicetes.x-=Math.cos(ang)*2; zenicetes.y-=Math.sin(ang)*2;
+                    } else { zenicetes.x=nX; zenicetes.y=nY; }
+                }
+            }
+        }
+    } else {
+        // 2 KİŞİLİK: oyuncu kontrolü
+        if (!everythingFrozen && !dialogueActive) {
+            if (zen2.showNumbers) {
+                // Sayıları saat yönünde, 1 = sağ üst, zenEdgeOrder'a göre çiz
+                zenEdgeOrder.forEach((edgeIdx, numIdx) => {
+                    let e=edges[edgeIdx];
+                    let mx=(e.x1+e.x2)/2, my=(e.y1+e.y2)/2;
+                    let outX=mx+(mx-center.x)*0.22, outY=my+(my-center.y)*0.22;
+                    ctx.fillStyle="#f1c40f"; ctx.font="bold 20px Arial"; ctx.textAlign="center";
+                    ctx.strokeStyle="black"; ctx.lineWidth=3;
+                    ctx.strokeText(String(numIdx+1), outX, outY);
+                    ctx.fillText(String(numIdx+1), outX, outY);
+                });
+            } else {
+                // Marker çiz — zenEdgeOrder ile doğru hendeği bul
+                let me=edges[zenEdgeOrder[zen2.markerIdx]];
+                let mx=(me.x1+me.x2)/2, my=(me.y1+me.y2)/2;
+                let outX=mx+(mx-center.x)*0.25, outY=my+(my-center.y)*0.25;
+                ctx.fillStyle="#9b59b6";
+                ctx.beginPath(); ctx.arc(outX,outY-8,9,0,Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(outX,outY+6); ctx.lineTo(outX-6,outY-5); ctx.lineTo(outX+6,outY-5); ctx.closePath(); ctx.fill();
+                ctx.fillStyle="white"; ctx.font="bold 12px Arial"; ctx.textAlign="center";
+                ctx.fillText("📍",outX,outY-2);
+            }
+            // Yürüme
+            if (zen2.walking) {
+                let dx=zen2.targetMidX-zenicetes.x, dy=zen2.targetMidY-zenicetes.y;
+                let dist=Math.hypot(dx,dy);
+                if (dist < 8) {
+                    // Hedefe ulaştı
+                    zen2.walking=false;
+                    let arrivedEdge=edges[zenEdgeOrder[zen2.markerIdx]];
+                    if (!arrivedEdge.isDug && !arrivedEdge.isDigging) {
+                        showDefeat(); return;
+                    }
+                    // Kazılmış/kazılıyor: merkeze ışınla, yeniden seçim
+                    zenicetes.x=center.x; zenicetes.y=center.y;
+                    zen2.showNumbers=true;
+                } else {
+                    let nX=zenicetes.x+dx/dist*zen2.speed;
+                    let nY=zenicetes.y+dy/dist*zen2.speed;
+                    // İşçilerin hedef pozisyonuna göre kontrol — animasyon sırasında oyuncunun üstünden geçince yanlış tetiklenmesin
+                    let hitWorker=ourWorkers.find(w=>Math.hypot(nX-w.tx,nY-w.ty)<18);
+                    let hitDug=edges.find(e=>e.isDug&&distToSegment({x:nX,y:nY},{x:e.x1,y:e.y1},{x:e.x2,y:e.y2})<20);
+                    // Oyuncuya yakınlık false pozitifi engelle
+                    let nearPlayer=Math.hypot(nX-player.x,nY-player.y)<22;
+                    if ((hitWorker||hitDug) && !nearPlayer) {
+                        // Çarpışma: merkeze ışınla, yeniden seçim
+                        zen2.walking=false;
+                        zenicetes.x=center.x; zenicetes.y=center.y;
+                        zen2.showNumbers=true;
+                    } else {
+                        zenicetes.x=nX; zenicetes.y=nY;
+                    }
+                }
+            }
+        }
+    }
+
+    // Zenicetes çizimi
+    ctx.fillStyle="purple"; ctx.fillRect(zenicetes.x-11,zenicetes.y-11,22,22);
+    ctx.fillStyle="white"; ctx.font="bold 12px Arial"; ctx.textAlign="left";
+    ctx.fillText("Zenicetes",zenicetes.x-22,zenicetes.y-15);
+    if (zenicetes.speechTimer>0){drawSpeechBubble(zenicetes.x,zenicetes.y,zenicetes.speechText);zenicetes.speechTimer--;}
+
+    // Kafası karışık işçi
+    if (confusedWorker.active && !everythingFrozen && !dialogueActive) {
+        if (confusedWorker.state==="COMING"){
+            confusedWorker.x+=(confusedWorker.targetX-confusedWorker.x)*0.1;
+            confusedWorker.y+=(confusedWorker.targetY-confusedWorker.y)*0.1;
+            if(Math.hypot(confusedWorker.targetX-confusedWorker.x,confusedWorker.targetY-confusedWorker.y)<5) confusedWorker.state="TALKING";
+        } else if (confusedWorker.state==="TALKING"){
+            confusedWorker.timer--; drawSpeechBubble(confusedWorker.x,confusedWorker.y,confusedWorker.text);
+            if(confusedWorker.timer<=0) confusedWorker.state="GOING";
+        } else if (confusedWorker.state==="GOING"){
+            confusedWorker.x+=(confusedWorker.startCorner.x-confusedWorker.x)*0.1;
+            confusedWorker.y+=(confusedWorker.startCorner.y-confusedWorker.y)*0.1;
+            if(Math.hypot(confusedWorker.startCorner.x-confusedWorker.x,confusedWorker.startCorner.y-confusedWorker.y)<5) confusedWorker.active=false;
+        }
+        ctx.fillStyle="#3498db"; ctx.beginPath(); ctx.arc(confusedWorker.x,confusedWorker.y,8,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle="white"; ctx.font="bold 10px Arial"; ctx.textAlign="left";
+        ctx.fillText("İşçi",confusedWorker.x-10,confusedWorker.y-12);
+    }
+
+    // Oyuncu hareketi
+    let nx=player.x, ny=player.y;
+    if (!everythingFrozen && !dialogueActive) {
+        if (keys["KeyW"]) ny-=player.speed;
+        if (keys["KeyS"]) ny+=player.speed;
+        if (keys["KeyA"]) nx-=player.speed;
+        if (keys["KeyD"]) nx+=player.speed;
+        if (gameMode==="single") {
+            if (keys["ArrowUp"])   ny-=player.speed;
+            if (keys["ArrowDown"]) ny+=player.speed;
+            if (keys["ArrowLeft"]) nx-=player.speed;
+            if (keys["ArrowRight"])nx+=player.speed;
+        }
+        // Mobil joystick — sadece yön, hız her zaman player.speed
+        if (isMobile && joystick.active) {
+            let jDist = Math.hypot(joystick.dx, joystick.dy);
+            if (jDist > 0.15) {
+                nx += (joystick.dx / jDist) * player.speed;
+                ny += (joystick.dy / jDist) * player.speed;
+            }
+        }
+        nx=Math.min(885,Math.max(15,nx)); ny=Math.min(635,Math.max(15,ny));
+        if (!edges.some(e=>e.isDug&&distToSegment({x:nx,y:ny},{x:e.x1,y:e.y1},{x:e.x2,y:e.y2})<20)) {
+            player.x=nx; player.y=ny;
+        }
+    }
+
+    // Köprü girişi → gemi ekranı
+    const onBridge=(player.x<20&&player.y>bridge.y+12&&player.y<bridge.y+bridge.h-12);
+    if (onBridge&&!dialogueActive&&state==="MAIN"&&!isShipMissionActive&&isShipReady&&shipStayTimer>0&&gameActive) {
+        state="SHIP_SCREEN"; isShipMissionActive=true; isShipReady=false;
+        player.x=850; player.y=325;
+        messenger.inShipMission=true;
+        captain.rewardGiven=false; captain.active=false; captain.nearbyTriggered=false;
+        if (messenger.entryType==="normal") {
+            messenger.shipMissionX=800; messenger.shipMissionY=325;
+            messenger.shipMissionTargetX=50; messenger.shipMissionTargetY=280;
+            messenger.shipMissionWalk=true; messenger.shipMissionSpeech="Gidelim!"; messenger.shipMissionTimer=90;
+        } else {
+            messenger.shipMissionX=60; messenger.shipMissionY=280;
+            messenger.shipMissionWalk=false; messenger.shipMissionSpeech="Fikrini değiştirdin demek!"; messenger.shipMissionTimer=90;
+        }
+        messenger.confirmed=false; messenger.noAnswerYet=false; messenger.active=false;
+    }
+
+    // Boşluk → hendek kaz
+    if (gameActive&&!everythingFrozen&&!dialogueActive&&keys["Space"]&&spaceBlockTimer===0&&(ourWorkers.length===0||(doubleDig&&ourWorkers.length<16))&&!confusedWorker.active) {
+        let touching=edges.filter(e=>!e.isDug&&!e.isDigging&&distToSegment(player,{x:e.x1,y:e.y1},{x:e.x2,y:e.y2})<25);
+        if (touching.length>0&&materials>=10) {
+            let s=touching[Math.floor(Math.random()*touching.length)];
+            s.isDigging=true; materials-=10;
+            let mX=(s.x1+s.x2)/2,mY=(s.y1+s.y2)/2,ang=Math.atan2(s.y2-s.y1,s.x2-s.x1);
+            for(let i=0;i<8;i++) ourWorkers.push({x:Math.random()*900,y:700,tx:mX+Math.cos(ang+Math.PI/2)*(i<4?-30:30)+Math.cos(ang)*(i%4*18-27),ty:mY+Math.sin(ang+Math.PI/2)*(i<4?-30:30)+Math.sin(ang)*(i%4*18-27),target:s,prog:0});
+            if (doubleDig&&touching.length>=2&&materials>=10) {
+                let s2=touching.find(e=>e!==s);
+                if(s2){
+                    s2.isDigging=true; materials-=10;
+                    let mX2=(s2.x1+s2.x2)/2,mY2=(s2.y1+s2.y2)/2,ang2=Math.atan2(s2.y2-s2.y1,s2.x2-s2.x1);
+                    for(let i=0;i<8;i++) ourWorkers.push({x:Math.random()*900,y:700,tx:mX2+Math.cos(ang2+Math.PI/2)*(i<4?-30:30)+Math.cos(ang2)*(i%4*18-27),ty:mY2+Math.sin(ang2+Math.PI/2)*(i<4?-30:30)+Math.sin(ang2)*(i%4*18-27),target:s2,prog:0});
+                }
+            }
+        } else if (touching.length===0) {
+            if (!confusedWorker.active) {
+                confusedWorker.active=true; confusedWorker.state="COMING"; confusedWorker.timer=150;
+                let cx=(player.x<450)?-20:920, cy=(player.y<325)?-20:670;
+                confusedWorker.x=cx; confusedWorker.y=cy; confusedWorker.startCorner={x:cx,y:cy};
+                confusedWorker.targetX=player.x+(player.x<450?40:-40); confusedWorker.targetY=player.y;
+            }
+        }
+        keys["Space"]=false;
+    }
+
+    // Gazeteci spawn
+    if (!isShipReady&&!isShipMissionActive&&shipCountdown<=0&&!messenger.active&&state==="MAIN"&&gameActive) {
+        messenger.active=true;
+        messenger.x=bridge.x+20; messenger.y=bridge.y+bridge.h/2-10;
+        messenger.targetStandX=bridge.x+bridge.w+30;
+        messenger.reachedPlayer=false; messenger.goingBack=false; messenger.confirmed=false;
+        messenger.hasExclamation=false; messenger.urgentWarningShown=false; messenger.noAnswerYet=false;
+        messenger.normalEntry=true; messenger.entryType="normal";
+        shipStayTimer=30; shipCountdown=40;
+        showFlash("📢 GAZETECİ GELDİ! KÖPRÜYE GİT");
+    }
+
+    // Gazeteci hareketi & çizimi
+    if (messenger.active) {
+        if (!messenger.reachedPlayer&&!messenger.goingBack&&messenger.x<messenger.targetStandX) {
+            messenger.x+=1.2;
+            if (messenger.x>=messenger.targetStandX){messenger.x=messenger.targetStandX;messenger.hasExclamation=true;}
+        }
+        if (messenger.goingBack) {
+            let tx=bridge.x+20,ty=bridge.y+bridge.h/2-10;
+            let an=Math.atan2(ty-messenger.y,tx-messenger.x);
+            messenger.x+=Math.cos(an)*3; messenger.y+=Math.sin(an)*3;
+            if(Math.hypot(tx-messenger.x,ty-messenger.y)<10){messenger.active=false;isShipReady=true;}
+        }
+        ctx.fillStyle="#e74c3c"; ctx.fillRect(messenger.x-10,messenger.y-10,20,20);
+        ctx.fillStyle="white"; ctx.font="bold 12px Arial"; ctx.textAlign="left";
+        ctx.fillText("Gazeteci",messenger.x-20,messenger.y-15);
+        if (messenger.hasExclamation&&!dialogueActive){ctx.fillStyle="yellow";ctx.font="bold 20px Arial";ctx.fillText("!",messenger.x,messenger.y-30);}
+        if (!dialogueActive&&!messenger.reachedPlayer&&!messenger.goingBack&&messenger.hasExclamation&&Math.hypot(player.x-messenger.x,player.y-messenger.y)<40) {
+            messenger.reachedPlayer=true; messenger.waitingDecision=true; messenger.hasExclamation=false;
+            document.getElementById("popup-warning").style.display="none";
+            let uyari=liarHit?"Geçen sefer söz verip gelmedin, umarım bu sefer gelirsin. ":"";
+            document.getElementById("popup-title").innerHTML="📜 Gemi Limanda!";
+            document.getElementById("popup-text").innerHTML=uyari+"Takviye malzemeleri geldi, gelmek ister misin?";
+            document.getElementById("popup-timer").innerText=`Kalan süre: ${shipStayTimer}s`;
+            document.getElementById("letter-popup").style.display="block";
+        }
+        if (messenger.speechTimer>0){drawSpeechBubble(messenger.x,messenger.y,messenger.speechText);messenger.speechTimer--;}
+    }
+
+    // Oyuncu çizimi
+    ctx.fillStyle="#e67e22"; ctx.fillRect(player.x-12,player.y-12,25,25);
+    ctx.fillStyle="white"; ctx.font="bold 12px Arial"; ctx.textAlign="left";
+    let playerLabel = gameMode==="two"?"Mühendis":"Sen";
+    ctx.fillText(playerLabel,player.x-20,player.y-15);
+
+    if (dialogueActive){ctx.fillStyle="rgba(0,0,0,0.65)";ctx.fillRect(0,0,900,650);}
+    document.getElementById("mats").innerText=materials;
+    ctx.textAlign="left";
+}
+
+// ── GEMİ EKRANI ───────────────────────────────────────────────
+function drawShipMission() {
+    ctx.fillStyle="#2ecc71"; ctx.fillRect(0,0,900,650);
+    ctx.fillStyle="#9b7653"; ctx.fillRect(0,280,900,90);
+    ctx.fillStyle="#8b4513"; ctx.fillRect(0,230,100,160);
+    ctx.fillStyle="black"; ctx.font="bold 20px Arial"; ctx.textAlign="center";
+    ctx.fillText("ERZAK GEMİSİ",50,215);
+
+    let cx=50,cy=310;
+    ctx.fillStyle="#f39c12"; ctx.fillRect(cx-8,cy-8,16,16);
+    ctx.fillStyle="white"; ctx.font="bold 12px Arial"; ctx.textAlign="center";
+    ctx.fillText("Gemi Kaptanı",cx,cy-12);
+
+    let dist=Math.hypot(player.x-cx,player.y-cy);
+    if (dist<40&&!captain.rewardGiven&&!captain.active&&gameActive&&!captain.nearbyTriggered) {
+        captain.nearbyTriggered=true; captain.active=true; captain.rewardGiven=true;
+        let rewardText="", rewardAmount=0;
+        if      (shipVisitCount===0){rewardAmount=40;rewardText="İlk sefer için 40 erzak getirdim!";}
+        else if (shipVisitCount===1){rewardAmount=20;rewardText="Bu sefer ekstra işçi ve 20 erzak getirdim! Artık iki hendek aynı anda kazabilirsiniz.";doubleDig=true; zenicetes.speed=0.25; zen2.speed=0.30;}
+        else if (shipVisitCount===2){rewardAmount=50;rewardText="3. sefer için 50 erzak getirdim!";}
+        else                        {rewardAmount=30;rewardText="Bu sefer 30 erzak getirdim.";}
+        if (rewardAmount>0) materials+=rewardAmount;
+        document.getElementById("popup-title").innerHTML="🚢 Gemi Kaptanı";
+        document.getElementById("popup-text").innerHTML=rewardText+(rewardAmount>0?` (+${rewardAmount} erzak)`:"");
+        document.getElementById("popup-timer").style.display="none";
+        let bg=document.querySelector("#letter-popup .button-group");
+        bg.innerHTML='<button id="captain-ok">Tamam</button>';
+        document.getElementById("letter-popup").style.display="block";
+        isShipMissionActive=true;
+        document.getElementById("captain-ok").onclick=()=>{
+            document.getElementById("letter-popup").style.display="none";
+            document.getElementById("popup-timer").style.display="block";
+            bg.innerHTML='<button id="btn-yes">EVET</button><button id="btn-no">ŞİMDİ DEĞİL</button>';
+            document.getElementById("btn-yes").onclick=()=>acceptShip(true);
+            document.getElementById("btn-no").onclick=()=>acceptShip(false);
+            isShipMissionActive=false; captain.active=false;
+            state="MAIN"; player.x=100; player.y=550;
+            messenger.inShipMission=false; isShipReady=false;
+            messenger.noAnswerYet=false; messenger.confirmed=false;
+            shipCountdown=40; shipStayTimer=30; shipVisitCount++;
+        };
+    }
+
+    if (messenger.inShipMission) {
+        if (messenger.shipMissionWalk) {
+            let dx=messenger.shipMissionTargetX-messenger.shipMissionX, dy=messenger.shipMissionTargetY-messenger.shipMissionY, d=Math.hypot(dx,dy);
+            if (d>3){let st=Math.min(3,d);messenger.shipMissionX+=dx/d*st;messenger.shipMissionY+=dy/d*st;}else messenger.shipMissionWalk=false;
+        }
+        ctx.fillStyle="#e74c3c"; ctx.fillRect(messenger.shipMissionX-10,messenger.shipMissionY-10,20,20);
+        ctx.fillStyle="white"; ctx.font="bold 12px Arial"; ctx.textAlign="left";
+        ctx.fillText("Gazeteci",messenger.shipMissionX-20,messenger.shipMissionY-15);
+        if (messenger.shipMissionTimer>0){drawSpeechBubble(messenger.shipMissionX,messenger.shipMissionY,messenger.shipMissionSpeech);messenger.shipMissionTimer--;}
+    } else {
+        ctx.fillStyle="#e74c3c"; ctx.fillRect(790,315,20,20);
+        ctx.fillStyle="white"; ctx.textAlign="left"; ctx.fillText("Gazeteci",775,310);
+    }
+
+    if (!captain.active) {
+        let nx=player.x,ny=player.y;
+        if(keys["KeyW"])ny-=5; if(keys["KeyS"])ny+=5;
+        if(keys["KeyA"])nx-=5; if(keys["KeyD"])nx+=5;
+        if (isMobile && joystick.active) {
+            let jDist = Math.hypot(joystick.dx, joystick.dy);
+            if (jDist > 0.15) { nx += (joystick.dx/jDist)*5; ny += (joystick.dy/jDist)*5; }
+        }
+        nx=Math.min(885,Math.max(15,nx)); ny=Math.min(635,Math.max(15,ny));
+        player.x=nx; player.y=ny;
+    }
+    if (captain.active){ctx.fillStyle="rgba(0,0,0,0.65)";ctx.fillRect(0,0,900,650);}
+    ctx.fillStyle="#e67e22"; ctx.fillRect(player.x-12,player.y-12,25,25);
+    ctx.fillStyle="white"; ctx.font="bold 12px Arial"; ctx.textAlign="left";
+    ctx.fillText(gameMode==="two"?"Mühendis":"Sen",player.x-20,player.y-15);
+    ctx.textAlign="left";
+}
+
+// ── TUŞ OLAYLARI ──────────────────────────────────────────────
+window.addEventListener("keydown", e => {
+    keys[e.code] = true;
+
+    // 2P Zenicetes kontrolleri
+    if (gameMode==="two" && state==="MAIN" && gameActive) {
+        if (zen2.showNumbers) {
+            for (let i=1;i<=8;i++) {
+                if (e.code===`Digit${i}`) { zen2.markerIdx=i-1; zen2.showNumbers=false; }
+            }
+        } else if (!zen2.walking) {
+            if (e.code==="ArrowLeft") {
+                zen2.markerIdx=(zen2.markerIdx-1+8)%8;
+                e.preventDefault();
+            }
+            if (e.code==="ArrowRight") {
+                zen2.markerIdx=(zen2.markerIdx+1)%8;
+                e.preventDefault();
+            }
+            if (e.code==="Enter") {
+                let te=edges[zenEdgeOrder[zen2.markerIdx]];
+                zen2.targetMidX=(te.x1+te.x2)/2; zen2.targetMidY=(te.y1+te.y2)/2;
+                zen2.walking=true; zen2.walkFrames=0;
+            }
+        }
+    }
+});
+window.addEventListener("keyup", e => { keys[e.code]=false; });
+
+// ── EKRAN AKIŞI ────────────────────────────────────────────────
+document.getElementById("startBtn").addEventListener("click", () => {
+    document.getElementById("intro-screen").style.display="none";
+    document.getElementById("story-screen").style.display="flex";
+});
+
+document.getElementById("storyNextBtn").addEventListener("click", () => {
+    document.getElementById("story-screen").style.display="none";
+    document.getElementById("mode-screen").style.display="flex";
+});
+
+document.getElementById("singleBtn").addEventListener("click", () => {
+    document.getElementById("mode-screen").style.display="none";
+    document.getElementById("tutorial-single").style.display="flex";
+    let onKey = e => {
+        if (e.code==="Space") {
+            window.removeEventListener("keydown", onKey);
+            document.getElementById("tutorial-single").style.display="none";
+            startGame("single");
+        }
+    };
+    window.addEventListener("keydown", onKey);
+});
+
+document.getElementById("twoBtn").addEventListener("click", () => {
+    if (isMobile) {
+        document.getElementById("mobile-two-msg").style.display = "block";
+        return;
+    }
+    document.getElementById("mode-screen").style.display="none";
+    document.getElementById("tutorial-two").style.display="flex";
+    let onKey = e => {
+        if (e.code==="Space") {
+            window.removeEventListener("keydown", onKey);
+            document.getElementById("tutorial-two").style.display="none";
+            startGame("two");
+        }
+    };
+    window.addEventListener("keydown", onKey);
+});
+
+// Mobil: tutorial'da "Başla" butonu
+document.getElementById("tut-single-start-btn").addEventListener("click", () => {
+    document.getElementById("tutorial-single").style.display="none";
+    startGame("single");
+});
+
+document.getElementById("victoryRestartBtn").addEventListener("click", goToModeSelect);
+document.getElementById("defeatRestartBtn").addEventListener("click", goToModeSelect);
+document.getElementById("btn-yes").addEventListener("click", () => acceptShip(true));
+document.getElementById("btn-no").addEventListener("click", () => acceptShip(false));
+</script>
+</body>
+</html>
